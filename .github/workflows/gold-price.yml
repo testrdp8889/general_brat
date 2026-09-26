@@ -1,0 +1,27 @@
+name: Gold Price Bot
+
+on:
+  schedule:
+    - cron: "0 4 * * *"   # har kuni UTC 04:00 (Toshkent vaqti bilan ~09:00) da ishga tushadi
+  workflow_dispatch:        # "Run workflow" tugmasi orqali qo'lda ham ishga tushirish mumkin
+
+jobs:
+  send-gold-price:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository'ni yuklab olish
+        uses: actions/checkout@v4
+
+      - name: Python o'rnatish
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Kerakli kutubxonani o'rnatish
+        run: pip install requests
+
+      - name: Botni ishga tushirish
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python oltin_narxi_bot.py
