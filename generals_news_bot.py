@@ -1,9 +1,6 @@
 """
 GeneralsGameCode (TheSuperHackers) loyihasidagi yangi release/yangilikni
-kuzatib, Telegram guruhga avtomatik yuboradigan bot.
-
-GitHub Actions versiyasi — token va chat ID kodga yozilmaydi,
-GitHub repository'ning "Secrets" bo'limidan avtomatik olinadi.
+kuzatib, Telegram guruhga rasm va matn bilan avtomatik yuboradigan bot.
 """
 
 import requests
@@ -15,15 +12,20 @@ TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 GITHUB_REPO = "TheSuperHackers/GeneralsGameCode"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
-TELEGRAM_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-LAST_RELEASE_FILE = "last_release.txt"
 
+# Telegram'ga rasm yuborish uchun sendPhoto ishlatamiz
+TELEGRAM_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+
+# Yangiliklar bilan birga chiqadigan banner rasmining havolasi 
+# (O'zingizga yoqqan boshqa rasm havolasiga o'zgartirishingiz mumkin)
+IMAGE_URL = "https://raw.githubusercontent.com/testrdp8889/general_brat/main/banner.jpg"
+
+LAST_RELEASE_FILE = "last_release.txt"
 MAX_CHANGELOG_LINES = 10
 
 
 def translate_to_russian(text):
-    """Bepul MyMemory API orqali inglizcha matnni ruschaga o'giradi.
-    Agar tarjima ishlamasa, original (inglizcha) matnni qaytaradi."""
+    """Bepul MyMemory API orqali inglizcha matnni ruschaga o'giradi."""
     if not text.strip():
         return text
     try:
@@ -78,7 +80,7 @@ def build_message(release):
     for line in trimmed:
         cleaned = line.lstrip("-* ").strip()
         translated_lines.append(translate_to_russian(cleaned))
-        time.sleep(1)  # tarjima xizmatini haddan tashqari yuklamaslik uchun
+        time.sleep(1)
 
     changelog_text = "\n".join(f"• {line}" for line in translated_lines)
     if len(lines) > MAX_CHANGELOG_LINES:
@@ -96,15 +98,15 @@ def build_message(release):
 def send_to_telegram(text, max_retries=3):
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
-        "text": text,
+        "photo": IMAGE_URL,  # Rasm havolasi
+        "caption": text,     # Rasm ostidagi matn (Telegram 1024 ta belgini qo'llab-quvvatlaydi)
         "parse_mode": "Markdown",
-        "disable_web_page_preview": False,
     }
     for attempt in range(1, max_retries + 1):
         try:
             response = requests.post(TELEGRAM_URL, data=payload, timeout=10)
             response.raise_for_status()
-            print("Xabar muvaffaqiyatli yuborildi.")
+            print("Rasm va xabar muvaffaqiyatli yuborildi.")
             return True
         except Exception as e:
             print(f"[{attempt}-urinish] Telegramga yuborishda xato: {e}")
