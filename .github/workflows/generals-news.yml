@@ -1,0 +1,38 @@
+name: Generals News Bot
+
+on:
+  schedule:
+    - cron: "0 8 * * *"   # har kuni UTC 08:00 (Toshkent vaqti bilan ~13:00) da ishga tushadi
+  workflow_dispatch:        # "Run workflow" tugmasi orqali qo'lda ham ishga tushirish mumkin
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository'ni yuklab olish
+        uses: actions/checkout@v4
+
+      - name: Python o'rnatish
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Kerakli kutubxonani o'rnatish
+        run: pip install requests
+
+      - name: Botni ishga tushirish
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python generals_news_bot.py
+
+      - name: Oxirgi yuborilgan versiyani saqlab qo'yish
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add last_release.txt
+          git diff --staged --quiet || git commit -m "Oxirgi yuborilgan release yangilandi"
+          git push
