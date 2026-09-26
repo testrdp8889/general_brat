@@ -1,72 +1,68 @@
 """
-Kunlik oltin narxini Telegram guruhga yuboruvchi bot.
+GeneralsGameCode (TheSuperHackers) loyihasidagi yangi release/yangilikni
+kuzatib, Telegram guruhga avtomatik yuboradigan bot.
 
-GitHub Actions versiyasi — hech qanday API kalit shart emas!
-gold-api.com — to'liq bepul, ro'yxatdan o'tish talab qilmaydi.
-Faqat Telegram token/chat ID GitHub Secrets'dan olinadi (ular allaqachon
-Generals bot uchun qo'shilgan bo'lsa, qayta qo'shish shart emas).
+GitHub Actions versiyasi — token va chat ID kodga yozilmaydi,
+GitHub repository'ning "Secrets" bo'limidan avtomatik olinadi.
 """
 
 import requests
 import time
 import os
-from datetime import datetime
 
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-GOLD_API_URL = "https://api.gold-api.com/price/XAU"
-EXCHANGE_API_URL = "https://open.er-api.com/v6/latest/USD"
+GITHUB_REPO = "TheSuperHackers/GeneralsGameCode"
+GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 TELEGRAM_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+LAST_RELEASE_FILE = "last_release.txt"
 
-GRAMS_PER_OUNCE = 31.1035
-FALLBACK_USD_TO_UZS = 12700  # kurs API ishlamay qolsa, shu zaxira qiymat ishlatiladi
+MAX_CHANGELOG_LINES = 10
 
 
-def get_gold_price(max_retries=3):
-    """gold-api.com'dan 1 untsiya oltin narxini USD'da oladi."""
+def get_latest_release(max_retries=3):
+    headers = {"Accept": "application/vnd.github+json"}
     for attempt in range(1, max_retries + 1):
         try:
-            response = requests.get(GOLD_API_URL, timeout=10)
+            response = requests.get(GITHUB_API_URL, headers=headers, timeout=10)
             response.raise_for_status()
-            return response.json()["price"]
+            return response.json()
         except Exception as e:
-            print(f"[{attempt}-urinish] Narx olishda xato: {e}")
+            print(f"[{attempt}-urinish] GitHub'dan olishda xato: {e}")
             if attempt < max_retries:
                 time.sleep(5)
     return None
 
 
-def get_usd_to_uzs_rate(max_retries=3):
-    """Jonli USD -> UZS kursini oladi. Ishlamasa, zaxira qiymatni qaytaradi."""
-    for attempt in range(1, max_retries + 1):
-        try:
-            response = requests.get(EXCHANGE_API_URL, timeout=10)
-            response.raise_for_status()
-            rate = response.json()["rates"]["UZS"]
-            return rate
-        except Exception as e:
-            print(f"[{attempt}-urinish] Kursni olishda xato: {e}")
-            if attempt < max_retries:
-                time.sleep(5)
-    print("Jonli kurs olinmadi, zaxira qiymat ishlatiladi.")
-    return FALLBACK_USD_TO_UZS
+def load_last_sent_tag():
+    if os.path.exists(LAST_RELEASE_FILE):
+        with open(LAST_RELEASE_FILE, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    return None
 
 
-def build_message(price_per_ounce_usd, usd_to_uzs):
-    price_per_gram_usd = price_per_ounce_usd / GRAMS_PER_OUNCE
-    price_per_gram_uzs = price_per_gram_usd * usd_to_uzs
+def save_last_sent_tag(tag):
+    with open(LAST_RELEASE_FILE, "w", encoding="utf-8") as f:
+        f.write(tag)
 
-    price_999 = price_per_gram_uzs
-    price_585 = price_per_gram_uzs * 0.585
 
-    today = datetime.now().strftime("%d.%m.%Y")
+def build_message(release):
+    tag = release.get("tag_name", "noma'lum")
+    url = release.get("html_url", "")
+    body = release.get("body", "") or ""
+
+    lines = [line for line in body.splitlines() if line.strip()]
+    trimmed = lines[:MAX_CHANGELOG_LINES]
+    changelog_text = "\n".join(f"• {line.lstrip('-* ').strip()}" for line in trimmed)
+    if len(lines) > MAX_CHANGELOG_LINES:
+        changelog_text += f"\n… va yana {len(lines) - MAX_CHANGELOG_LINES} ta o'zgarish"
 
     message = (
-        f"🟡 *Сегодняшняя цена золота* ({today})\n\n"
-        f"1 грамм, проба 999: {price_999:,.0f} сум\n"
-        f"1 грамм, проба 585: {price_585:,.0f} сум\n\n"
-        f"(1 унция: ${price_per_ounce_usd:,.2f}, курс: {usd_to_uzs:,.0f} сум/$)"
+        f"🎮 *Generals Zero Hour — yangi yangilanish!*\n\n"
+        f"Versiya: `{tag}`\n\n"
+        f"{changelog_text if changelog_text else 'Tafsilotlar uchun havolaga qarang.'}\n\n"
+        f"🔗 {url}"
     )
     return message
 
@@ -76,6 +72,7 @@ def send_to_telegram(text, max_retries=3):
         "chat_id": TELEGRAM_CHAT_ID,
         "text": text,
         "parse_mode": "Markdown",
+        "disable_web_page_preview": False,
     }
     for attempt in range(1, max_retries + 1):
         try:
@@ -91,18 +88,25 @@ def send_to_telegram(text, max_retries=3):
 
 
 def main():
-    price = get_gold_price()
-    if price is None:
-        print("Oltin narxini olib bo'lmadi. Dastur to'xtatildi.")
+    release = get_latest_release()
+    if release is None:
+        print("GitHub'dan ma'lumot olib bo'lmadi. Dastur to'xtatildi.")
         return
 
-    usd_to_uzs = get_usd_to_uzs_rate()
+    tag = release.get("tag_name")
+    last_sent = load_last_sent_tag()
 
-    message = build_message(price, usd_to_uzs)
+    if tag == last_sent:
+        print(f"Yangilik yo'q. Oxirgi yuborilgan: {tag}")
+        return
+
+    message = build_message(release)
     print(message)
-    send_to_telegram(message)
+    if send_to_telegram(message):
+        save_last_sent_tag(tag)
 
 
 if __name__ == "__main__":
     main()
+
 
