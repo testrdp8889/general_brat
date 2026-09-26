@@ -21,6 +21,25 @@ LAST_RELEASE_FILE = "last_release.txt"
 MAX_CHANGELOG_LINES = 10
 
 
+def translate_to_russian(text):
+    """Bepul MyMemory API orqali inglizcha matnni ruschaga o'giradi.
+    Agar tarjima ishlamasa, original (inglizcha) matnni qaytaradi."""
+    if not text.strip():
+        return text
+    try:
+        params = {"q": text, "langpair": "en|ru"}
+        response = requests.get(
+            "https://api.mymemory.translated.net/get", params=params, timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+        translated = data.get("responseData", {}).get("translatedText")
+        return translated if translated else text
+    except Exception as e:
+        print(f"Tarjima xatosi: {e}")
+        return text
+
+
 def get_latest_release(max_retries=3):
     headers = {"Accept": "application/vnd.github+json"}
     for attempt in range(1, max_retries + 1):
@@ -48,20 +67,27 @@ def save_last_sent_tag(tag):
 
 
 def build_message(release):
-    tag = release.get("tag_name", "noma'lum")
+    tag = release.get("tag_name", "неизвестно")
     url = release.get("html_url", "")
     body = release.get("body", "") or ""
 
     lines = [line for line in body.splitlines() if line.strip()]
     trimmed = lines[:MAX_CHANGELOG_LINES]
-    changelog_text = "\n".join(f"• {line.lstrip('-* ').strip()}" for line in trimmed)
+
+    translated_lines = []
+    for line in trimmed:
+        cleaned = line.lstrip("-* ").strip()
+        translated_lines.append(translate_to_russian(cleaned))
+        time.sleep(1)  # tarjima xizmatini haddan tashqari yuklamaslik uchun
+
+    changelog_text = "\n".join(f"• {line}" for line in translated_lines)
     if len(lines) > MAX_CHANGELOG_LINES:
-        changelog_text += f"\n… va yana {len(lines) - MAX_CHANGELOG_LINES} ta o'zgarish"
+        changelog_text += f"\n… и еще {len(lines) - MAX_CHANGELOG_LINES} изменений"
 
     message = (
-        f"🎮 *Generals Zero Hour — yangi yangilanish!*\n\n"
-        f"Versiya: `{tag}`\n\n"
-        f"{changelog_text if changelog_text else 'Tafsilotlar uchun havolaga qarang.'}\n\n"
+        f"🎮 *Generals Zero Hour — новое обновление!*\n\n"
+        f"Версия: `{tag}`\n\n"
+        f"{changelog_text if changelog_text else 'Подробности см. по ссылке.'}\n\n"
         f"🔗 {url}"
     )
     return message
