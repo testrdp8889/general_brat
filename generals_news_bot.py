@@ -19,7 +19,7 @@ GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 TELEGRAM_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    f"gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+    f"gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 )
 LAST_RELEASE_FILE = "last_release.txt"
 
