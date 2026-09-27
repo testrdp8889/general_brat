@@ -1,0 +1,31 @@
+name: Chatty Checkin Bot
+
+on:
+  schedule:
+    - cron: "23 2 * * *"    # ~07:23 Toshkent (ertalab)
+    - cron: "37 6 * * *"    # ~11:37 Toshkent (peshin)
+    - cron: "41 10 * * *"   # ~15:41 Toshkent (tushlikdan keyin)
+    - cron: "53 15 * * *"   # ~20:53 Toshkent (kechqurun)
+  workflow_dispatch:
+
+jobs:
+  send-checkin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository'ni yuklab olish
+        uses: actions/checkout@v4
+
+      - name: Python o'rnatish
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Kerakli kutubxonani o'rnatish
+        run: pip install requests
+
+      - name: Botni ishga tushirish
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python chatty_checkin_bot.py
