@@ -12,31 +12,76 @@ import os
 
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 
 GITHUB_REPO = "TheSuperHackers/GeneralsGameCode"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 TELEGRAM_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    f"gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+)
 LAST_RELEASE_FILE = "last_release.txt"
 
-MAX_CHANGELOG_LINES = 10
+MAX_CHANGELOG_LINES = 25  # AI'ga yuboriladigan xom qatorlar soni (chiqishda qisqaradi)
 
 
-def translate_to_russian(text):
-    """Bepul MyMemory API orqali inglizcha matnni ruschaga o'giradi.
-    Agar tarjima ishlamasa, original (inglizcha) matnni qaytaradi."""
+def analyze_for_contra_x(changelog_raw, tag):
+    """Gemini AI orqali changelog'ni tahlil qiladi: ruschaga o'giradi va
+    Contra X mod uchun aynan nimasi foydali ekanini ajratib ko'rsatadi.
+    Ishlamasa — None qaytaradi (chaqiruvchi funksiya zaxira usulga o'tadi)."""
+    prompt = (
+        "Sen Command & Conquer Generals Zero Hour o'yinining ochiq manba "
+        "engine loyihasi (GeneralsGameCode)dagi yangi release changelog'ini "
+        "tahlil qilyapsan. Quyida o'sha changelog matni (inglizcha, GitHub'dan):\n\n"
+        f"{changelog_raw}\n\n"
+        "Vazifa: shu o'zgarishlarni o'qib, ular ichidan 'Contra X' nomli "
+        "mashhur community mod (bu ham xuddi shu engine'ga asoslangan, INI "
+        "fayllar, generals/general obyektlari, weapon/upgrade/particle "
+        "tizimlari orqali ishlaydi) uchun FOYDALI yoki AHAMIYATLI bo'lgan "
+        "narsalarni ajratib chiqar. Masalan: modding API'lari, -mod orqali "
+        "yuklash imkoniyatlari, INI parser o'zgarishlari, bug fix'lar (agar "
+        "mod ham shu bugdan aziyat chekishi mumkin bo'lsa), yangi engine "
+        "imkoniyatlari, limitlarni oshirish (masalan max unit, max effect), "
+        "yoki performance/crash tuzatishlari.\n\n"
+        "Javobni RUS tilida, quyidagi formatda yoz:\n"
+        "Qisqa umumiy xulosa (1-2 gap) qanday holatida ekanini, keyin "
+        "'⚙️ Полезно для Contra X:' sarlavhasi ostida 2-5 ta bullet "
+        "(agar chindan ham modding uchun ahamiyatli narsa bo'lsa — har "
+        "birini 1 qatorda, nega foydali ekanini ham qisqa tushuntir). "
+        "Agar hech narsa modding uchun ahamiyatli bo'lmasa, aynan shuni "
+        "yoz: 'Bu safar Contra X uchun alohida ahamiyatli o'zgarish yo'q.' "
+        "Ortiqcha kirish so'zlarsiz, to'g'ridan-to'g'ri javob ber."
+    )
+
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    for attempt in range(1, 4):
+        try:
+            response = requests.post(GEMINI_URL, json=payload, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except Exception as e:
+            print(f"[{attempt}-urinish] Gemini tahlilida xato: {e}")
+            if attempt < 3:
+                time.sleep(5)
+    return None
+
+
+def fallback_translate(text):
+    """Gemini ishlamay qolsa ishlatiladigan zaxira tarjima (MyMemory, bepul)."""
     if not text.strip():
         return text
     try:
-        params = {"q": text, "langpair": "en|ru"}
+        params = {"q": text[:490], "langpair": "en|ru"}
         response = requests.get(
             "https://api.mymemory.translated.net/get", params=params, timeout=10
         )
         response.raise_for_status()
-        data = response.json()
-        translated = data.get("responseData", {}).get("translatedText")
+        translated = response.json().get("responseData", {}).get("translatedText")
         return translated if translated else text
     except Exception as e:
-        print(f"Tarjima xatosi: {e}")
+        print(f"Zaxira tarjima xatosi: {e}")
         return text
 
 
@@ -71,23 +116,26 @@ def build_message(release):
     url = release.get("html_url", "")
     body = release.get("body", "") or ""
 
-    lines = [line for line in body.splitlines() if line.strip()]
+    lines = [line.lstrip("-* ").strip() for line in body.splitlines() if line.strip()]
     trimmed = lines[:MAX_CHANGELOG_LINES]
+    changelog_raw = "\n".join(trimmed)
 
-    translated_lines = []
-    for line in trimmed:
-        cleaned = line.lstrip("-* ").strip()
-        translated_lines.append(translate_to_russian(cleaned))
-        time.sleep(1)  # tarjima xizmatini haddan tashqari yuklamaslik uchun
+    analysis = analyze_for_contra_x(changelog_raw, tag) if changelog_raw else None
 
-    changelog_text = "\n".join(f"• {line}" for line in translated_lines)
-    if len(lines) > MAX_CHANGELOG_LINES:
-        changelog_text += f"\n… и еще {len(lines) - MAX_CHANGELOG_LINES} изменений"
+    if analysis:
+        body_text = analysis
+    else:
+        # Zaxira: AI ishlamasa, oddiy qator-baqator tarjima qilamiz
+        print("AI tahlili ishlamadi, zaxira tarjimaga o'tildi.")
+        translated_lines = [fallback_translate(line) for line in trimmed[:10]]
+        body_text = "\n".join(f"• {line}" for line in translated_lines)
+        if not body_text:
+            body_text = "Подробности см. по ссылке."
 
     message = (
         f"🎮 *Generals Zero Hour — новое обновление!*\n\n"
         f"Версия: `{tag}`\n\n"
-        f"{changelog_text if changelog_text else 'Подробности см. по ссылке.'}\n\n"
+        f"{body_text}\n\n"
         f"🔗 {url}"
     )
     return message
@@ -134,5 +182,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
