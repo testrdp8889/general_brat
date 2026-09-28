@@ -2,8 +2,8 @@ name: Gold Price Bot
 
 on:
   schedule:
-    - cron: "0 4 * * *"   # har kuni UTC 04:00 (Toshkent vaqti bilan ~09:00) da ishga tushadi
-  workflow_dispatch:        # "Run workflow" tugmasi orqali qo'lda ham ishga tushirish mumkin
+    - cron: "7 4 * * *"
+  workflow_dispatch:
 
 jobs:
   send-gold-price:
@@ -18,7 +18,10 @@ jobs:
           python-version: "3.12"
 
       - name: Kerakli kutubxonani o'rnatish
-        run: pip install requests
+        run: pip install requests pillow
+
+      - name: Kirill shriftini o'rnatish
+        run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
 
       - name: Botni ishga tushirish
         env:
