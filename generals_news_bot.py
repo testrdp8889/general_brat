@@ -9,6 +9,7 @@ GitHub repository'ning "Secrets" bo'limidan avtomatik olinadi.
 import requests
 import time
 import os
+from image_utils import create_card_image
 
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
@@ -16,7 +17,7 @@ GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 
 GITHUB_REPO = "TheSuperHackers/GeneralsGameCode"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
-TELEGRAM_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+TELEGRAM_PHOTO_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     f"gemini-3.6-flash:generateContent?key={GEMINI_API_KEY}"
@@ -111,7 +112,7 @@ def save_last_sent_tag(tag):
         f.write(tag)
 
 
-def build_message(release):
+def build_card_and_caption(release):
     tag = release.get("tag_name", "неизвестно")
     url = release.get("html_url", "")
     body = release.get("body", "") or ""
@@ -132,27 +133,27 @@ def build_message(release):
         if not body_text:
             body_text = "Подробности см. по ссылке."
 
-    message = (
-        f"🎮 *Generals Zero Hour — новое обновление!*\n\n"
-        f"Версия: `{tag}`\n\n"
-        f"{body_text}\n\n"
-        f"🔗 {url}"
+    image_bytes = create_card_image(
+        title="🎮 Generals Zero Hour",
+        subtitle=f"Обновление: {tag}",
+        body_text=body_text,
+        bg_color=(18, 28, 22),
+        accent_color=(120, 200, 140),
     )
-    return message
+    caption = f"🔗 {url}"
+    return image_bytes, caption
 
 
-def send_to_telegram(text, max_retries=3):
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": text,
-        "parse_mode": "Markdown",
-        "disable_web_page_preview": False,
-    }
+def send_photo_to_telegram(image_bytes, caption, max_retries=3):
     for attempt in range(1, max_retries + 1):
         try:
-            response = requests.post(TELEGRAM_URL, data=payload, timeout=10)
+            files = {"photo": ("update.png", image_bytes, "image/png")}
+            data = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption}
+            response = requests.post(
+                TELEGRAM_PHOTO_URL, data=data, files=files, timeout=20
+            )
             response.raise_for_status()
-            print("Xabar muvaffaqiyatli yuborildi.")
+            print("Rasm muvaffaqiyatli yuborildi.")
             return True
         except Exception as e:
             print(f"[{attempt}-urinish] Telegramga yuborishda xato: {e}")
@@ -174,9 +175,8 @@ def main():
         print(f"Yangilik yo'q. Oxirgi yuborilgan: {tag}")
         return
 
-    message = build_message(release)
-    print(message)
-    if send_to_telegram(message):
+    image_bytes, caption = build_card_and_caption(release)
+    if send_photo_to_telegram(image_bytes, caption):
         save_last_sent_tag(tag)
 
 
