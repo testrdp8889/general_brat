@@ -11,13 +11,14 @@ import requests
 import time
 import os
 from datetime import datetime
+from image_utils import create_card_image
 
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 GOLD_API_URL = "https://api.gold-api.com/price/XAU"
 EXCHANGE_API_URL = "https://open.er-api.com/v6/latest/USD"
-TELEGRAM_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+TELEGRAM_PHOTO_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
 
 GRAMS_PER_OUNCE = 31.1035
 FALLBACK_USD_TO_UZS = 12700  # kurs API ishlamay qolsa, shu zaxira qiymat ishlatiladi
@@ -53,7 +54,7 @@ def get_usd_to_uzs_rate(max_retries=3):
     return FALLBACK_USD_TO_UZS
 
 
-def build_message(price_per_ounce_usd, usd_to_uzs):
+def build_card_image(price_per_ounce_usd, usd_to_uzs):
     price_per_gram_usd = price_per_ounce_usd / GRAMS_PER_OUNCE
     price_per_gram_uzs = price_per_gram_usd * usd_to_uzs
 
@@ -62,26 +63,31 @@ def build_message(price_per_ounce_usd, usd_to_uzs):
 
     today = datetime.now().strftime("%d.%m.%Y")
 
-    message = (
-        f"🟡 *Сегодняшняя цена золота* ({today})\n\n"
-        f"1 грамм, проба 999: {price_999:,.0f} сум\n"
-        f"1 грамм, проба 585: {price_585:,.0f} сум\n\n"
-        f"(1 унция: ${price_per_ounce_usd:,.2f}, курс: {usd_to_uzs:,.0f} сум/$)"
+    body_text = (
+        f"Проба 999: {price_999:,.0f} сум/г\n"
+        f"Проба 585: {price_585:,.0f} сум/г\n\n"
+        f"Унция: ${price_per_ounce_usd:,.2f}   •   Курс: {usd_to_uzs:,.0f} сум/$"
     )
-    return message
+
+    return create_card_image(
+        title="🟡 Цена золота",
+        subtitle=today,
+        body_text=body_text,
+        bg_color=(38, 30, 12),
+        accent_color=(255, 205, 92),
+    )
 
 
-def send_to_telegram(text, max_retries=3):
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": text,
-        "parse_mode": "Markdown",
-    }
+def send_photo_to_telegram(image_bytes, max_retries=3):
     for attempt in range(1, max_retries + 1):
         try:
-            response = requests.post(TELEGRAM_URL, data=payload, timeout=10)
+            files = {"photo": ("gold.png", image_bytes, "image/png")}
+            data = {"chat_id": TELEGRAM_CHAT_ID}
+            response = requests.post(
+                TELEGRAM_PHOTO_URL, data=data, files=files, timeout=20
+            )
             response.raise_for_status()
-            print("Xabar muvaffaqiyatli yuborildi.")
+            print("Rasm muvaffaqiyatli yuborildi.")
             return True
         except Exception as e:
             print(f"[{attempt}-urinish] Telegramga yuborishda xato: {e}")
@@ -98,10 +104,5 @@ def main():
 
     usd_to_uzs = get_usd_to_uzs_rate()
 
-    message = build_message(price, usd_to_uzs)
-    print(message)
-    send_to_telegram(message)
+    image_bytes = build_card_image(price, usd_to_uzs)
 
-
-if __name__ == "__main__":
-    main()
