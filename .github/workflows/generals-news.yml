@@ -2,8 +2,8 @@ name: Generals News Bot
 
 on:
   schedule:
-    - cron: "13 8 * * *"   # har kuni UTC 08:13 (Toshkent vaqti bilan ~13:13) da ishga tushadi
-  workflow_dispatch:        # "Run workflow" tugmasi orqali qo'lda ham ishga tushirish mumkin
+    - cron: "13 8 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -21,7 +21,10 @@ jobs:
           python-version: "3.12"
 
       - name: Kerakli kutubxonani o'rnatish
-        run: pip install requests
+        run: pip install requests pillow
+
+      - name: Kirill shriftini o'rnatish
+        run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
 
       - name: Botni ishga tushirish
         env:
