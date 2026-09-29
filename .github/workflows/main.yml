@@ -1,0 +1,27 @@
+name: Gold AI Telegram Bot
+
+on:
+  workflow_dispatch:
+
+jobs:
+  gold-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository ni yuklab olish
+        uses: actions/checkout@v4
+
+      - name: Python o'rnatish
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Kutubxonalarni o'rnatish
+        run: |
+          pip install python-telegram-bot requests google-genai
+
+      - name: Gold AI Botni ishga tushirish
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python gold_bot.py
