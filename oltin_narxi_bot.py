@@ -70,7 +70,7 @@ def build_card_image(price_per_ounce_usd, usd_to_uzs):
     )
 
     return create_card_image(
-        title="🟡 Цена золота",
+        title="Цена золота",
         subtitle=today,
         body_text=body_text,
         bg_color=(38, 30, 12),
@@ -105,4 +105,8 @@ def main():
     usd_to_uzs = get_usd_to_uzs_rate()
 
     image_bytes = build_card_image(price, usd_to_uzs)
+    send_photo_to_telegram(image_bytes)
 
+
+if __name__ == "__main__":
+    main()
