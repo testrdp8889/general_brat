@@ -28,44 +28,48 @@ MAX_CHANGELOG_LINES = 25  # AI'ga yuboriladigan xom qatorlar soni (chiqishda qis
 
 
 def analyze_for_contra_x(changelog_raw, tag):
-    """Gemini AI orqali changelog'ni tahlil qiladi: ruschaga o'giradi va
-    Contra X mod uchun aynan nimasi foydali ekanini ajratib ko'rsatadi.
-    Ishlamasa — None qaytaradi (chaqiruvchi funksiya zaxira usulga o'tadi)."""
+    """Gemini AI orqali changelog'ni Contra X O'YINCHILARI nuqtai nazaridan
+    tahlil qiladi (ruscha). Ishlamasa — None qaytaradi."""
     prompt = (
-        "Sen Command & Conquer Generals Zero Hour o'yinining ochiq manba "
-        "engine loyihasi (GeneralsGameCode)dagi yangi release changelog'ini "
-        "tahlil qilyapsan. Quyida o'sha changelog matni (inglizcha, GitHub'dan):\n\n"
+        "Ты пишешь короткую новость для Telegram-группы, где сидят ТОЛЬКО "
+        "игроки в Contra X (популярный мод для C&C Generals Zero Hour). "
+        "Это обычные игроки, не моддеры и не программисты. Ниже список "
+        "изменений нового релиза открытого движка GeneralsGameCode "
+        "(на этом движке работает и Generals Online) на английском:\n\n"
         f"{changelog_raw}\n\n"
-        "Vazifa: shu o'zgarishlarni o'qib, ular ichidan 'Contra X' nomli "
-        "mashhur community mod (bu ham xuddi shu engine'ga asoslangan, INI "
-        "fayllar, generals/general obyektlari, weapon/upgrade/particle "
-        "tizimlari orqali ishlaydi) uchun FOYDALI yoki AHAMIYATLI bo'lgan "
-        "narsalarni ajratib chiqar. Masalan: modding API'lari, -mod orqali "
-        "yuklash imkoniyatlari, INI parser o'zgarishlari, bug fix'lar (agar "
-        "mod ham shu bugdan aziyat chekishi mumkin bo'lsa), yangi engine "
-        "imkoniyatlari, limitlarni oshirish (masalan max unit, max effect), "
-        "yoki performance/crash tuzatishlari.\n\n"
-        "Javobni RUS tilida, quyidagi formatda yoz:\n"
-        "Qisqa umumiy xulosa (1-2 gap) qanday holatida ekanini, keyin "
-        "'⚙️ Полезно для Contra X:' sarlavhasi ostida 2-5 ta bullet "
-        "(agar chindan ham modding uchun ahamiyatli narsa bo'lsa — har "
-        "birini 1 qatorda, nega foydali ekanini ham qisqa tushuntir). "
-        "Agar hech narsa modding uchun ahamiyatli bo'lmasa, aynan shuni "
-        "yoz: 'Bu safar Contra X uchun alohida ahamiyatli o'zgarish yo'q.' "
-        "Ortiqcha kirish so'zlarsiz, to'g'ridan-to'g'ri javob ber."
+        "Задача: объясни простым языком, что этот релиз даёт или может "
+        "дать игрокам Contra X: стабильность и вылеты, FPS и "
+        "производительность, онлайн-игра и Generals Online, совместимость "
+        "с модом, исправленные баги в игре, интерфейс, замороженные "
+        "юниты и т.п. Технические термины (refactor, DLL, заголовочные "
+        "файлы) переводи на человеческий язык или пропускай.\n\n"
+        "Формат ответа (по-русски, без вступлений, без markdown-звёздочек):\n"
+        "1) Одна короткая строка: что это за обновление в целом.\n"
+        "2) Заголовок 'Что это даёт игрокам Contra X:' и 2-4 пункта с "
+        "символом '•', каждый в 1 строку, понятно и конкретно.\n"
+        "3) Если изменения только внутренние и игрок ничего не заметит — "
+        "честно скажи это одной строкой и добавь, зачем это нужно "
+        "(например, подготовка почвы для будущих улучшений). "
+        "Ничего не выдумывай сверх списка изменений."
     )
 
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
     for attempt in range(1, 4):
         try:
-            response = requests.post(GEMINI_URL, json=payload, timeout=30)
-            response.raise_for_status()
+            response = requests.post(GEMINI_URL, json=payload, timeout=60)
+            if not response.ok:
+                print(f"[{attempt}-urinish] Gemini javobi: {response.status_code} {response.text[:300]}")
+                response.raise_for_status()
             data = response.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            parts = data["candidates"][0]["content"]["parts"]
+            text = "".join(p.get("text", "") for p in parts).strip()
+            if text:
+                return text
+            print(f"[{attempt}-urinish] Gemini bo'sh javob qaytardi.")
         except Exception as e:
             print(f"[{attempt}-urinish] Gemini tahlilida xato: {e}")
-            if attempt < 3:
-                time.sleep(5)
+        if attempt < 3:
+            time.sleep(5)
     return None
 
 
@@ -134,7 +138,7 @@ def build_card_and_caption(release):
             body_text = "Подробности см. по ссылке."
 
     image_bytes = create_card_image(
-        title="🎮 Generals Zero Hour",
+        title="Generals Zero Hour",
         subtitle=f"Обновление: {tag}",
         body_text=body_text,
         bg_color=(18, 28, 22),
@@ -182,3 +186,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+omprmpropromrompomprmpropromrompomprmpropromrompmpro
