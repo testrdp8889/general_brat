@@ -5,79 +5,64 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from google import genai
 
 
-# =========================
-# API SOZLAMALARI
-# =========================
-
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-GOLD_API_KEY = os.getenv("GOLD_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-GOLD_URL = "https://www.goldapi.io/api/XAU/USD"
+GOLD_URL = "https://api.goldprice.dev/v1/prices?symbol=XAU-USD-SPOT"
 
-
-# =========================
-# OLTIN NARXINI OLISH
-# =========================
 
 def get_gold_data():
-
-    headers = {
-        "x-access-token": GOLD_API_KEY,
-        "Content-Type": "application/json"
-    }
-
     response = requests.get(
         GOLD_URL,
-        headers=headers,
         timeout=10
     )
 
     if response.status_code != 200:
         return None
 
-    return response.json()
+    data = response.json()
 
+    if not data.get("symbols"):
+        return None
 
-# =========================
-# GEMINI AI TAHLILI
-# =========================
+    return data["symbols"][0]
+
 
 def analyze_gold(gold_data):
-
     client = genai.Client(
         api_key=GEMINI_API_KEY
     )
 
     price = gold_data.get("price")
-    change = gold_data.get("ch")
-    change_percent = gold_data.get("pcp")
-    high = gold_data.get("high_price")
-    low = gold_data.get("low_price")
+    computed_at = gold_data.get("computed_at")
+    is_stale = gold_data.get("is_stale")
 
     prompt = f"""
-Sen oltin bozori bo'yicha AI tahlilchi yordamchisan.
+Sen XAU/USD oltin bozori bo'yicha AI tahlilchi yordamchisan.
 
-XAU/USD ma'lumotlari:
+Hozirgi bozor ma'lumotlari:
 
-Hozirgi narx: {price}
-O'zgarish: {change}
-O'zgarish foizi: {change_percent}%
-Kunlik High: {high}
-Kunlik Low: {low}
+XAU/USD narxi: {price} USD
+Vaqt: {computed_at}
+Ma'lumot eskirganmi: {is_stale}
 
-Shu ma'lumotlarni o'zbek tilida qisqa va tushunarli tahlil qil.
+Shu ma'lumot asosida o'zbek tilida qisqa va tushunarli tahlil qil.
 
 Quyidagilarni ko'rsat:
 
 🪙 XAU/USD narxi
-📈 Bozor yo'nalishi
-🟢 Support
-🔴 Resistance
 📊 Bozor holati
+📈 Yo'nalish bo'yicha kuzatuv
+🟢 Muhim qo'llab-quvvatlash (agar aniqlash uchun ma'lumot yetarli bo'lsa)
+🔴 Muhim qarshilik (agar aniqlash uchun ma'lumot yetarli bo'lsa)
 🤖 AI xulosasi
 
-Ma'lumot yetarli bo'lmasa, buni ayt.
+MUHIM:
+Faqat berilgan ma'lumotga asoslan.
+Agar tarixiy narxlar yetarli bo'lmasa, aniq support/resistance,
+RSI yoki boshqa texnik indikatorlarni o'ylab topma.
+Ma'lumot yetarli emasligini ochiq ayt.
+
 Aniq foyda yoki zarar kafolatini bermagin.
 Bu investitsiya maslahati emas.
 """
@@ -90,10 +75,6 @@ Bu investitsiya maslahati emas.
     return result.text
 
 
-# =========================
-# /gold BUYRUG'I
-# =========================
-
 async def gold(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
@@ -101,7 +82,6 @@ async def gold(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     try:
-
         gold_data = get_gold_data()
 
         if not gold_data:
@@ -125,18 +105,10 @@ async def gold(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
-# =========================
-# BOTNI ISHGA TUSHIRISH
-# =========================
-
 def main():
 
     if not TELEGRAM_TOKEN:
         print("❌ TELEGRAM_TOKEN topilmadi")
-        return
-
-    if not GOLD_API_KEY:
-        print("❌ GOLD_API_KEY topilmadi")
         return
 
     if not GEMINI_API_KEY:
