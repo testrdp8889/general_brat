@@ -38,33 +38,35 @@ def analyze_gold(gold_data):
     is_stale = gold_data.get("is_stale")
 
     prompt = f"""
-Sen XAU/USD oltin bozori bo'yicha AI tahlilchi yordamchisan.
+Ты AI-аналитик рынка золота XAU/USD.
 
-Hozirgi bozor ma'lumotlari:
+Текущие рыночные данные:
 
-XAU/USD narxi: {price} USD
-Vaqt: {computed_at}
-Ma'lumot eskirganmi: {is_stale}
+Цена XAU/USD: {price} USD
+Время обновления: {computed_at}
+Данные устарели: {is_stale}
 
-Shu ma'lumot asosida o'zbek tilida qisqa va tushunarli tahlil qil.
+Проведи краткий и понятный анализ на РУССКОМ языке.
 
-Quyidagilarni ko'rsat:
+Покажи:
 
-🪙 XAU/USD narxi
-📊 Bozor holati
-📈 Yo'nalish bo'yicha kuzatuv
-🟢 Muhim qo'llab-quvvatlash (agar aniqlash uchun ma'lumot yetarli bo'lsa)
-🔴 Muhim qarshilik (agar aniqlash uchun ma'lumot yetarli bo'lsa)
-🤖 AI xulosasi
+🪙 Цена XAU/USD
+📊 Состояние рынка
+📈 Наблюдаемое направление движения
+🟢 Важная поддержка — только если данных достаточно
+🔴 Важное сопротивление — только если данных достаточно
+🤖 Вывод AI
 
-MUHIM:
-Faqat berilgan ma'lumotga asoslan.
-Agar tarixiy narxlar yetarli bo'lmasa, aniq support/resistance,
-RSI yoki boshqa texnik indikatorlarni o'ylab topma.
-Ma'lumot yetarli emasligini ochiq ayt.
+ВАЖНО:
 
-Aniq foyda yoki zarar kafolatini bermagin.
-Bu investitsiya maslahati emas.
+Не выдумывай данные.
+
+Если исторических данных недостаточно для определения поддержки,
+сопротивления, RSI или других технических индикаторов,
+прямо укажи, что данных недостаточно.
+
+Не гарантируй прибыль или убыток.
+Это не является инвестиционной рекомендацией.
 """
 
     result = client.models.generate_content(
@@ -78,7 +80,7 @@ Bu investitsiya maslahati emas.
 async def gold(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
-        "⏳ Oltin bozori tekshirilmoqda..."
+        "⏳ Анализ рынка золота выполняется..."
     )
 
     try:
@@ -86,7 +88,7 @@ async def gold(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not gold_data:
             await update.message.reply_text(
-                "❌ Gold API'dan ma'lumot olinmadi."
+                "❌ Не удалось получить данные о золоте."
             )
             return
 
@@ -101,18 +103,18 @@ async def gold(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("ERROR:", e)
 
         await update.message.reply_text(
-            "❌ Xatolik yuz berdi. API sozlamalarini tekshiring."
+            "❌ Произошла ошибка. Проверьте настройки API."
         )
 
 
 def main():
 
     if not TELEGRAM_TOKEN:
-        print("❌ TELEGRAM_TOKEN topilmadi")
+        print("❌ TELEGRAM_TOKEN не найден")
         return
 
     if not GEMINI_API_KEY:
-        print("❌ GEMINI_API_KEY topilmadi")
+        print("❌ GEMINI_API_KEY не найден")
         return
 
     app = Application.builder().token(
@@ -123,7 +125,7 @@ def main():
         CommandHandler("gold", gold)
     )
 
-    print("🤖 GOLD AI BOT ISHLAYAPTI")
+    print("🤖 GOLD AI BOT ЗАПУЩЕН")
 
     app.run_polling()
 
