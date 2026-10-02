@@ -17,10 +17,16 @@ TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 
 TELEGRAM_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-GEMINI_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    f"gemini-3.6-flash:generateContent?key={GEMINI_API_KEY}"
-)
+GEMINI_MODELS = [
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-3.8-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
+]
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
 
 TASHKENT_OFFSET = timedelta(hours=5)
 
@@ -57,16 +63,27 @@ def generate_message(slot):
         "tirnoqsiz."
     )
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    for attempt in range(1, 4):
-        try:
-            response = requests.post(GEMINI_URL, json=payload, timeout=30)
-            response.raise_for_status()
-            data = response.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        except Exception as e:
-            print(f"[{attempt}-urinish] Gemini xatosi: {e}")
-            if attempt < 3:
-                time.sleep(5)
+    for model in GEMINI_MODELS:
+        url = f"{GEMINI_BASE}{model}:generateContent?key={GEMINI_API_KEY}"
+        for attempt in range(1, 3):
+            try:
+                response = requests.post(url, json=payload, timeout=40)
+                if response.status_code == 404:
+                    print(f"[{model}] mavjud emas (404), keyingisiga o'tamiz.")
+                    break
+                if not response.ok:
+                    print(f"[{model}, {attempt}-urinish] {response.status_code} {response.text[:150]}")
+                    response.raise_for_status()
+                data = response.json()
+                parts = data["candidates"][0]["content"]["parts"]
+                text = "".join(p.get("text", "") for p in parts).strip()
+                if text:
+                    print(f"Muvaffaqiyatli: {model}")
+                    return text
+            except Exception as e:
+                print(f"[{model}, {attempt}-urinish] Xato: {e}")
+            if attempt < 2:
+                time.sleep(8)
     return None
 
 
