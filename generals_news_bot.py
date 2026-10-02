@@ -19,9 +19,13 @@ GITHUB_REPO = "TheSuperHackers/GeneralsGameCode"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 TELEGRAM_PHOTO_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
 GEMINI_MODELS = [
-    "gemini-3.6-flash",       # asosiy model
-    "gemini-3.5-flash",       # zaxira 1 (asosiysi band bo'lsa)
-    "gemini-3.1-flash-lite",  # zaxira 2 (yengil, kamroq band bo'ladi)
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-3.8-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
 ]
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
 LAST_RELEASE_FILE = "last_release.txt"
