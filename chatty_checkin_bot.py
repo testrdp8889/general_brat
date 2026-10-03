@@ -10,6 +10,7 @@ oralig'ida ekanini aniqlab, shunga mos uslubda xabar yaratadi.
 import requests
 import time
 import os
+import random
 from datetime import datetime, timezone, timedelta
 
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
@@ -29,6 +30,34 @@ GEMINI_MODELS = [
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
 
 TASHKENT_OFFSET = timedelta(hours=5)
+
+
+# Bot ba'zan shu odamlardan birini tanlab, unga ismi bilan do'stona hazil yozadi.
+#   weight — qanchalik tez-tez tanlanishi (XAL ko'proq, shuning uchun 3)
+#   hint   — shu odamga qanday uslubda hazil qilish haqida ko'rsatma
+PEOPLE = {
+    "XAL": {
+        "weight": 3,
+        "hint": (
+            "XAL ga kinoyali, do'stona hazillar yoz: hazil mavzusi — go'yo u "
+            "o'yinga va'da berib, keyin 'aldab' qo'yadigandek; uni o'yinga "
+            "chaqir va ozgina chimchilab qo'y. "
+            "Ohang namunasi (aynan takrorlama, o'zing o'ylab top): "
+            "'XAL bugun o'ynaysanmi yoki yana aldaysanmi!', "
+            "'XAL qachon endi o'ynaymiz, qo'rqma!'"
+        ),
+    },
+    "Шероз": {
+        "weight": 1,
+        "hint": (
+            "Шероз ga yengil, do'stona turtki ber: masalan u yigitlarni "
+            "yig'ib o'yinga chaqirmasa bo'lmayapti, sensiz katka yig'ilmayapti "
+            "ruhida (aynan takrorlama, o'zing o'ylab top)."
+        ),
+    },
+}
+# Check-in xabarlarining qanchasi bironta odamga ismi bilan qaratiladi (0.5 = yarmi)
+PERSONAL_MESSAGE_PROBABILITY = 0.5
 
 
 def get_time_slot():
@@ -62,6 +91,17 @@ def generate_message(slot):
         "Ortiqcha kirish so'zisiz, faqat tayyor xabarning o'zini yoz, "
         "tirnoqsiz."
     )
+    if PEOPLE and random.random() < PERSONAL_MESSAGE_PROBABILITY:
+        names = list(PEOPLE)
+        target = random.choices(names, weights=[PEOPLE[n]["weight"] for n in names])[0]
+        prompt += (
+            f"\n\nMUHIM: bu safar xabarni aynan {target} ismli odamga qarata "
+            "yoz, uni ismi bilan chaqir. "
+            f"{PEOPLE[target]['hint']} "
+            "Har safar boshqacha, yangi gap o'ylab top. Haqorat qilma, "
+            "chindan xafa qiladigan gap yozma — faqat do'stona, yengil, "
+            "kinoyali hazil (o'rtoqlar orasidagi hazil kabi). RUS TILIDA yoz."
+        )
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
     for model in GEMINI_MODELS:
         url = f"{GEMINI_BASE}{model}:generateContent?key={GEMINI_API_KEY}"
