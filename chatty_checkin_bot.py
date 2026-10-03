@@ -103,6 +103,11 @@ def send_to_telegram(text, max_retries=3):
 
 
 def main():
+    tashkent_hour = (datetime.now(timezone.utc) + TASHKENT_OFFSET).hour
+    if tashkent_hour < 7 or tashkent_hour >= 22:
+        print(f"Toshkent vaqti bilan soat {tashkent_hour}:00 — kechasi yozmaymiz. To'xtatildi.")
+        return
+
     slot = get_time_slot()
     print(f"Vaqt bo'lagi: {slot}")
 
