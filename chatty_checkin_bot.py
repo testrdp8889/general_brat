@@ -39,20 +39,19 @@ PEOPLE = {
     "XAL": {
         "weight": 3,
         "hint": (
-            "XAL ga kinoyali, do'stona hazillar yoz: hazil mavzusi — go'yo u "
-            "o'yinga va'da berib, keyin 'aldab' qo'yadigandek; uni o'yinga "
-            "chaqir va ozgina chimchilab qo'y. "
-            "Ohang namunasi (aynan takrorlama, o'zing o'ylab top): "
-            "'XAL bugun o'ynaysanmi yoki yana aldaysanmi!', "
-            "'XAL qachon endi o'ynaymiz, qo'rqma!'"
+            "Шути над XAL саркастично, по-дружески: тема шутки — будто он "
+            "обещает сыграть, а потом «кидает» и не приходит. Позови его "
+            "играть и слегка подколи. Примеры тона (не повторяй дословно, "
+            "придумай своё): «XAL, сегодня играешь или опять обманешь?», "
+            "«XAL, когда уже сыграем? Не бойся!»"
         ),
     },
     "Шероз": {
         "weight": 1,
         "hint": (
-            "Шероз ga yengil, do'stona turtki ber: masalan u yigitlarni "
-            "yig'ib o'yinga chaqirmasa bo'lmayapti, sensiz katka yig'ilmayapti "
-            "ruhida (aynan takrorlama, o'zing o'ylab top)."
+            "Мягко и по-дружески подтолкни Шероза: например, что без него "
+            "катка не собирается, пусть собирает пацанов и зовёт играть. "
+            "Не повторяй пример дословно, придумай своё."
         ),
     },
 }
@@ -65,43 +64,43 @@ def get_time_slot():
     tashkent_now = datetime.now(timezone.utc) + TASHKENT_OFFSET
     hour = tashkent_now.hour
     if 6 <= hour < 10:
-        return "ertalab (odamlar hali uyg'onib, ishga/kunga tayyorlanmoqda)"
+        return "утро (люди только просыпаются и собираются на работу/по делам)"
     if 10 <= hour < 13:
-        return "peshin (kun qizigan, odamlar band bo'lishi mumkin)"
+        return "полдень (день в разгаре, люди могут быть заняты)"
     if 13 <= hour < 17:
-        return "tushlikdan keyingi vaqt (kayfiyat biroz tushgan, dam kerak)"
-    return "kechqurun (kun tugab, odamlar bo'shashgan, engilroq suhbat vaqti)"
+        return "время после обеда (настроение немного падает, хочется отдохнуть)"
+    return "вечер (день закончился, люди расслаблены, время лёгкого общения)"
 
 
 def generate_message(slot):
     prompt = (
-        "Sen Telegram guruhidagi oddiy, jonli ishtirokchisan — bot emas, "
-        "haqiqiy do'st kabi yozasan. Guruh nomi 'Генералы', u yerda "
-        "Command & Conquer Generals Zero Hour va uning Contra X modi "
-        "haqida gaplashadigan gamer yigitlar bor.\n\n"
-        f"Hozir kunning quyidagi bo'lagi: {slot}.\n\n"
-        "Vazifa: guruhga 1-2 qisqa gapdan iborat, tabiiy, hazilkash, "
-        "do'stona (erkin, sleng aralash) xabar yoz — bu suhbatni "
-        "boshlab yuborish yoki jonlantirish uchun. RUS TILIDA yoz. "
-        "Ba'zida savol ber (masalan kim nima o'ynayapti, kim uyg'oq "
-        "kabi), ba'zida shunchaki hazil yoki kayfiyat ulashuvchi gap "
-        "yoz, ba'zida Generals/Contra X mavzusiga bog'lab yubor — "
-        "har safar har xil, takrorlanma. Salomlashish so'zi bilan "
-        "HAR SAFAR boshlash shart emas, xilma-xillik muhim. "
-        "Ortiqcha kirish so'zisiz, faqat tayyor xabarning o'zini yoz, "
-        "tirnoqsiz."
+        "Ты — обычный живой участник Telegram-группы, а не бот: пишешь как "
+        "настоящий друг. Группа называется «Генералы», там общаются геймеры "
+        "про Command & Conquer Generals Zero Hour и мод Contra X.\n\n"
+        f"Сейчас время суток: {slot}.\n\n"
+        "Задача: напиши в группу 1-2 коротких предложения — естественно, "
+        "с юмором, по-дружески (свободно, со сленгом), чтобы завязать или "
+        "оживить разговор. Иногда задавай вопрос (кто во что играет, кто "
+        "не спит), иногда просто шути или делись настроением, иногда "
+        "связывай с Generals/Contra X — каждый раз по-разному, не повторяйся. "
+        "Не обязательно начинать с приветствия, разнообразие важнее. "
+        "Выведи только готовое сообщение, без вступлений и без кавычек."
     )
     if PEOPLE and random.random() < PERSONAL_MESSAGE_PROBABILITY:
         names = list(PEOPLE)
         target = random.choices(names, weights=[PEOPLE[n]["weight"] for n in names])[0]
         prompt += (
-            f"\n\nMUHIM: bu safar xabarni aynan {target} ismli odamga qarata "
-            "yoz, uni ismi bilan chaqir. "
+            f"\n\nВАЖНО: в этот раз обратись лично к участнику по имени "
+            f"{target} и назови его по имени. "
             f"{PEOPLE[target]['hint']} "
-            "Har safar boshqacha, yangi gap o'ylab top. Haqorat qilma, "
-            "chindan xafa qiladigan gap yozma — faqat do'stona, yengil, "
-            "kinoyali hazil (o'rtoqlar orasidagi hazil kabi). RUS TILIDA yoz."
+            "Каждый раз придумывай новую фразу. Не оскорбляй и не пиши "
+            "ничего, что реально обидит — только дружеская, лёгкая, "
+            "саркастичная шутка, как между друзьями."
         )
+    prompt += (
+        "\n\nЯЗЫК: пиши СТРОГО по-русски, кириллицей. Не пиши по-узбекски "
+        "и не используй латиницу (единственное исключение — ник XAL)."
+    )
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
     for model in GEMINI_MODELS:
         url = f"{GEMINI_BASE}{model}:generateContent?key={GEMINI_API_KEY}"
